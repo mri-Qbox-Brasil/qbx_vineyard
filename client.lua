@@ -24,32 +24,10 @@ local random = 0
 local pickedGrapes = 0
 local blip = 0
 local winetimer = Config.wineTimer
+local grapeLocations = Config.grapeLocations
 local loadIngredients = false
 local wineStarted = false
 local finishedWine = false
-
-local grapeLocations = {
-	[1] = vector3(-1875.41, 2100.37, 138.86),
-	[2] = vector3(-1908.69, 2107.48, 131.31),
-	[3] = vector3(-1866.04, 2112.64, 134.41),
-	[4] = vector3(-1907.76, 2125.35, 124.03),
-	[5] = vector3(-1850.31, 2142.95, 122.30),
-	[6] = vector3(-1888.22, 2164.51, 114.81),
-	[7] = vector3(-1835.52, 2180.59, 104.88),
-	[8] = vector3(-1891.98, 2208.35, 94.56),
-	[9] = vector3(-1720.37, 2182.03, 106.18),
-	[10] = vector3(-1808.52, 2173.14, 107.63),
-	[11] = vector3(-1784.22, 2222.80, 92.86),
-	[12] = vector3(-1889.13, 2250.05, 79.63),
-	[13] = vector3(-1861.16, 2254.32, 81.04),
-	[14] = vector3(-1886.75, 2272.45, 70.81),
-	[15] = vector3(-1845.49, 2274.63, 73.33),
-	[16] = vector3(-1687.28, 2195.76, 97.87),
-	[17] = vector3(-1741.18, 2173.22, 114.39),
-	[18] = vector3(-1743.17, 2141.11, 121.18),
-	[19] = vector3(-1813.84, 2089.57, 134.21),
-	[20] = vector3(-1698.71, 2150.65, 110.41),
-}
 
 local function log(debugMessage)
 	print(('^6[^3qb-vineyard^6]^0 %s'):format(debugMessage))
@@ -68,39 +46,35 @@ local function CreateBlip()
 end
 
 local function nextTask()
-	if tasking then
-		return
-	end
+	if tasking then return end
 	random = math.random(#grapeLocations)
 	tasking = true
 	CreateBlip()
+end
+
+local function getVineyard(totalGrapes)
+	if not tasking then return 5000 end
+	nextTask()
+	pickedGrapes = pickedGrapes + 1
+	if pickedGrapes ~= totalGrapes then return 5 end
+	nextTask()
+	startVineyard = false
+	pickedGrapes = 0
+	QBCore.Functions.Notify(Lang:t("text.end_shift"))
+	return 20000
 end
 
 local function startVinyard()
 	local amount = math.random(Config.PickAmount.min, Config.PickAmount.max)
 	QBCore.Functions.Notify(Lang:t("text.start_shift"))
 	while startVineyard do
-		if tasking then
-			Wait(5000)
-		else
-			nextTask()
-			pickedGrapes = pickedGrapes + 1
-			if pickedGrapes == amount then
-				nextTask()
-				Wait(20000)
-				startVineyard = false
-				pickedGrapes = 0
-				QBCore.Functions.Notify(Lang:t("text.end_shift"))
-			end
-		end
-		Wait(5)
+		Wait(getVineyard(amount))
 	end
 end
 
 local function DeleteBlip()
-	if DoesBlipExist(blip) then
-		RemoveBlip(blip)
-	end
+	if not DoesBlipExist(blip) then return end
+	RemoveBlip(blip)
 end
 
 local function pickProcess()

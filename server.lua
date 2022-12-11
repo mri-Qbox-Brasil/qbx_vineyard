@@ -11,48 +11,36 @@ QBCore.Functions.CreateCallback('qb-vineyard:server:loadIngredients', function(s
 	local src = source
 	local Player = QBCore.Functions.GetPlayer(src)
     local grape = Player.Functions.GetItemByName('grapejuice')
-	if Player.PlayerData.items ~= nil then
-        if grape ~= nil then
-            if grape.amount >= 23 then
-                Player.Functions.RemoveItem("grapejuice", 23, false)
-                TriggerClientEvent('inventory:client:ItemBox', source, QBCore.Shared.Items['grapejuice'], "remove")
-                cb(true)
-            else
-                TriggerClientEvent('QBCore:Notify', source, Lang:t("error.invalid_items"), 'error')
-                cb(false)
-            end
-        else
-            TriggerClientEvent('QBCore:Notify', source, Lang:t("error.invalid_items"), 'error')
-            cb(false)
-        end
-	else
-		TriggerClientEvent('QBCore:Notify', source, Lang:t("error.no_items"), "error")
+	if not Player.PlayerData.items then
+        TriggerClientEvent('QBCore:Notify', source, Lang:t("error.no_items"), "error")
         cb(false)
-	end
+        return
+    end
+    if not grape or grape.amount < 23 then
+        TriggerClientEvent('QBCore:Notify', source, Lang:t("error.invalid_items"), 'error')
+        cb(false)
+        return
+    end
+    Player.Functions.RemoveItem("grapejuice", 23, false)
+    TriggerClientEvent('inventory:client:ItemBox', source, QBCore.Shared.Items['grapejuice'], "remove")
+    cb(true)
 end)
 
 QBCore.Functions.CreateCallback('qb-vineyard:server:grapeJuice', function(source, cb)
 	local src = source
 	local Player = QBCore.Functions.GetPlayer(src)
     local grape = Player.Functions.GetItemByName('grape')
-	if Player.PlayerData.items ~= nil then
-        if grape ~= nil then
-            if grape.amount >= 16 then
-                Player.Functions.RemoveItem("grape", 16, false)
-                TriggerClientEvent('inventory:client:ItemBox', source, QBCore.Shared.Items['grape'], "remove")
-                cb(true)
-            else
-                TriggerClientEvent('QBCore:Notify', source, Lang:t("error.invalid_items"), 'error')
-                cb(false)
-            end
-        else
-            TriggerClientEvent('QBCore:Notify', source, Lang:t("error.invalid_items"), 'error')
-            cb(false)
-        end
-	else
-		TriggerClientEvent('QBCore:Notify', source, Lang:t("error.no_items"), "error")
+	if not Player.PlayerData.items then
+        TriggerClientEvent('QBCore:Notify', source, Lang:t("error.no_items"), "error")
         cb(false)
-	end
+    end
+    if not grape or grape.amount < 16 then
+        TriggerClientEvent('QBCore:Notify', source, Lang:t("error.invalid_items"), 'error')
+        cb(false)
+    end
+    Player.Functions.RemoveItem("grape", 16, false)
+    TriggerClientEvent('inventory:client:ItemBox', source, QBCore.Shared.Items['grape'], "remove")
+    cb(true)
 end)
 
 RegisterNetEvent('qb-vineyard:server:receiveWine', function()
