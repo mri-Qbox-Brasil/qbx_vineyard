@@ -3,4 +3,4 @@ Vineyard Job For QB-Core
 ## Dependencies
 
 * [qb-core](https://github.com/qbcore-framework/qb-core)
-* [PolyZone](https://github.com/mkafrin/PolyZone)
+* [ox_lib](https://github.com/overextended/ox_lib)

@@ -5,6 +5,7 @@ description 'QB-Vineyard'
 version '1.1.0'
 
 shared_scripts {
+    '@ox_lib/init.lua',
     '@qb-core/shared/locale.lua',
     'locales/en.lua',
     'config.lua'
@@ -12,14 +13,12 @@ shared_scripts {
 
 server_script 'server.lua'
 client_scripts {
-    '@PolyZone/client.lua',
-    '@PolyZone/BoxZone.lua',
     'client.lua'
 }
 
 dependencies {
-    'qb-core',
-    'PolyZone'
+    'ox_lib',
+    'qb-core'
 }
 
 lua54 'yes'
