@@ -12,12 +12,12 @@ QBCore.Functions.CreateCallback('qb-vineyard:server:loadIngredients', function(s
 	local Player = QBCore.Functions.GetPlayer(src)
     local grape = Player.Functions.GetItemByName('grapejuice')
 	if not Player.PlayerData.items then
-        TriggerClientEvent('QBCore:Notify', source, Lang:t("error.no_items"), "error")
+        TriggerClientEvent('ox_lib:notify', source, {type = 'error', description = Lang:t("error.no_items")})
         cb(false)
         return
     end
     if not grape or grape.amount < 23 then
-        TriggerClientEvent('QBCore:Notify', source, Lang:t("error.invalid_items"), 'error')
+        TriggerClientEvent('ox_lib:notify', source, {type = 'error', description = Lang:t("error.invalid_items")})
         cb(false)
         return
     end
@@ -31,11 +31,11 @@ QBCore.Functions.CreateCallback('qb-vineyard:server:grapeJuice', function(source
 	local Player = QBCore.Functions.GetPlayer(src)
     local grape = Player.Functions.GetItemByName('grape')
 	if not Player.PlayerData.items then
-        TriggerClientEvent('QBCore:Notify', source, Lang:t("error.no_items"), "error")
+        TriggerClientEvent('ox_lib:notify', source, {type = 'error', description = Lang:t("error.no_items")})
         cb(false)
     end
     if not grape or grape.amount < 16 then
-        TriggerClientEvent('QBCore:Notify', source, Lang:t("error.invalid_items"), 'error')
+        TriggerClientEvent('ox_lib:notify', source, {type = 'error', description = Lang:t("error.invalid_items")})
         cb(false)
     end
     Player.Functions.RemoveItem("grape", 16, false)
