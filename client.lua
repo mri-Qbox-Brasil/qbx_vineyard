@@ -1,12 +1,15 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 local PlayerJob = {}
+local startZones = {}
+local grapeZones = {}
+local wineZones = {}
+local juiceZones = {}
 
 AddEventHandler('onResourceStart', function(resourceName)
-    if resourceName == GetCurrentResourceName() then
-		QBCore.Functions.GetPlayerData(function(PlayerData)
-			PlayerJob = PlayerData.job
-		end)
-    end
+    if resourceName ~= GetCurrentResourceName() then return end
+	QBCore.Functions.GetPlayerData(function(PlayerData)
+		PlayerJob = PlayerData.job
+	end)
 end)
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     QBCore.Functions.GetPlayerData(function(PlayerData)
@@ -60,13 +63,13 @@ local function getVineyard(totalGrapes)
 	nextTask()
 	startVineyard = false
 	pickedGrapes = 0
-	QBCore.Functions.Notify(Lang:t("text.end_shift"))
+	lib.notify({description= {Lang:t("text.end_shift")}, type = "inform"})
 	return 20000
 end
 
 local function startVinyard()
 	local amount = math.random(Config.PickAmount.min, Config.PickAmount.max)
-	QBCore.Functions.Notify(Lang:t("text.start_shift"))
+	lib.notify({description= {Lang:t("text.start_shift")}, type = "inform"})
 	while startVineyard do
 		Wait(getVineyard(amount))
 	end
@@ -78,20 +81,20 @@ local function DeleteBlip()
 end
 
 local function pickProcess()
-    QBCore.Functions.Progressbar("pick_grape", Lang:t("progress.pick_grapes"), math.random(6000,8000), false, true, {
-        disableMovement = true,
-        disableCarMovement = true,
-        disableMouse = false,
-        disableCombat = true,
-    }, {}, {}, {}, function() -- Done
+	if lib.progressCircle({label = Lang:t("progress.pick_grapes"), duration = math.random(6000,8000), canCancel = true, disable = {
+		disableMovement = true,
+		disableCarMovement = true,
+		disableMouse = false,
+		disableCombat = true,
+	},}
+	) then
 		tasking = false
         TriggerServerEvent("qb-vineyard:server:getGrapes")
 		DeleteBlip()
-        ClearPedTasks(PlayerPedId())
-    end, function() -- Cancel
-        ClearPedTasks(PlayerPedId())
-        QBCore.Functions.Notify(Lang:t("task.cancel_task"), "error")
-    end)
+	else
+		lib.notify({description= {Lang:t("task.cancel_task")}, type = "error"})
+	end
+	ClearPedTasks(PlayerPedId())
 end
 
 local function LoadAnim(dict)
@@ -107,46 +110,43 @@ local function PickAnim()
     TaskPlayAnim(ped, 'amb@prop_human_bum_bin@idle_a', 'idle_a', 6.0, -6.0, -1, 47, 0, 0, 0, 0)
 end
 
-local grapeZones = {}
-for k=1, #grapeLocations do
-	local label = ("GrapeZone-%s"):format(k)
-	grapeZones[k] = {
-		isInside = false,
-		zone = BoxZone:Create(grapeLocations[k], 1.75, 3, {
-			name=label,
-			minZ = grapeLocations[k].z-1.0,
-			maxZ = grapeLocations[k].z+1.0,
-			debugPoly=Config.Debug,
-		})
-	}
-	grapeZones[k].zone:onPlayerInOut(function(isPointInside)
-		grapeZones[k].isInside = isPointInside
-		if grapeZones[k].isInside then
-			if Config.Debug then
-				log(Lang:t("text.zone_entered",{zone=label}))
-				if k == random then log(Lang:t("text.valid_zone")) else log(Lang:t("text.invalid_zone")) end
-			end
-
-			if k==random then
-				CreateThread(function()
-					while grapeZones[k].isInside and k==random do
-						exports['qb-core']:DrawText(Lang:t("task.start_task"),'right')
-						if not IsPedInAnyVehicle(PlayerPedId()) and IsControlJustReleased(0,38) then
-							PickAnim()
-							pickProcess()
-							exports['qb-core']:HideText()
-							random = 0
-						end
-						Wait(1)
-					end
-				end)
-			end
-		else
-			if Config.Debug then log(Lang:t("text.zone_exited",{zone=label})) end
-			exports['qb-core']:HideText()
-		end
-	end)
+local function exitZone(self)
+	if not Config.Debug then return end
+	lib.notify({description= {Lang:t("text.zone_exited", self.id)}, type = "inform"})
 end
+
+local function enterZone(self)
+	if not Config.Debug then return end
+	lib.notify({description= {Lang:t("text.zone_entered", self.id)}, type = "inform"})
+end
+
+local function insideGrapeZone()
+	exports['qb-core']:DrawText(Lang:t("task.start_task"),'right')
+	if not IsPedInAnyVehicle(PlayerPedId()) and IsControlJustReleased(0,38) then
+		PickAnim()
+		pickProcess()
+		exports['qb-core']:HideText()
+		random = 0
+	end
+end
+
+
+grapeZones = lib.zones.poly({
+	points = grapeLocations,
+	thickness = 2,
+	debug = Config.Debug,
+	onExit = exitZone(),
+	onEnter = enterZone(),
+	inside = function()
+		CreateThread(function()
+			while true do
+				insideGrapeZone()
+				Wait(1)
+				grapeZones:remove()
+			end
+		end)
+	end
+})
 
 local function StartWineProcess()
     CreateThread(function()
@@ -169,138 +169,113 @@ local function PrepareAnim()
 end
 
 local function grapeJuiceProcess()
-    QBCore.Functions.Progressbar("grape_juice", Lang:t("progress.process_grapes"), math.random(15000,20000), false, true, {
-        disableMovement = true,
-        disableCarMovement = true,
-        disableMouse = false,
-        disableCombat = true,
-    }, {}, {}, {}, function() -- Done
-        TriggerServerEvent("qb-vineyard:server:receiveGrapeJuice")
-        ClearPedTasks(PlayerPedId())
-    end, function() -- Cancel
-        ClearPedTasks(PlayerPedId())
-        QBCore.Functions.Notify(Lang:t("task.cancel_task"), "error")
-    end)
+	if lib.progressCircle({label = Lang:t("progress.process_grapes"), duration = math.random(15000,20000), canCancel = true, disable = {
+		disableMovement = true,
+		disableCarMovement = true,
+		disableMouse = false,
+		disableCombat = true,
+	},}) then
+		TriggerServerEvent("qb-vineyard:server:receiveGrapeJuice")
+	else
+		lib.notify({description= {Lang:t("task.cancel_task")}, type = "error"})
+	end
+	ClearPedTasks(PlayerPedId())
 end
 
-local Zones = {}
-Zones[1] = {
-	isInside = false,
-	zone = PolyZone:Create(Config.Vineyard.start.zones, {
-		name="Vineyard-Start",
-		minZ = Config.Vineyard.start.minZ,
-		maxZ = Config.Vineyard.start.maxZ,
-		debugPoly = Config.Debug
-	})
-}
-Zones[1].zone:onPlayerInOut(function(isPointInside)
-	Zones[1].isInside = isPointInside
-	if isPointInside then
-		if Config.Debug then log(Lang:t("text.zone_entered",{zone="Start"})) end
-		if not startVineyard and PlayerJob.name == "vineyard" then
-			exports['qb-core']:DrawText(Lang:t("task.start_task"),'right')
-			CreateThread(function()
-				while Zones[1].isInside do
-					if IsControlJustReleased(0,38) and not startVineyard then
-						startVineyard = true
-						startVinyard()
-					end
-					Wait(1)
-				end
-			end)
+local function insideStartZone()
+	if not IsControlJustReleased(0,38) or startVineyard then return end
+	startVineyard = true
+	startVinyard()
+	startZones:remove()
+end
 
-		end
-	else
-		if Config.Debug then log(Lang:t("text.zone_exited",{zone="Start"})) end
-		exports['qb-core']:HideText()
+startZones = lib.zones.poly({
+	points = Config.Vineyard.start.zones,
+	thickness = 2,
+	debug = Config.Debug,
+	onExit = exitZone(),
+	onEnter = enterZone(),
+	inside = function()
+		exports['qb-core']:DrawText(Lang:t("task.start_task"),'right')
+		CreateThread(function()
+			insideStartZone()
+			Wait(1)
+		end)
 	end
-end)
+})
 
-Zones[2] = {
-	isInside = false,
-	zone = PolyZone:Create(Config.Vineyard.wine.zones, {
-		name="Vineyard-Wine",
-		minZ = Config.Vineyard.wine.minZ,
-		maxZ = Config.Vineyard.wine.maxZ,
-		debugPoly = Config.Debug
-	})
-}
-Zones[2].zone:onPlayerInOut(function(isPointInside)
-	Zones[2].isInside = isPointInside
-	if isPointInside then
-		if Config.Debug then log(Lang:t("text.zone_entered",{zone="Wine"})) end
-		
-		if not startVineyard and PlayerJob.name == "vineyard" then
-			CreateThread(function()
-				while Zones[2].isInside do
-					if not wineStarted then
-						if not loadIngredients then
-							exports['qb-core']:DrawText(Lang:t("task.load_ingrediants"),'right')
-							if IsControlJustPressed(0, 38) and not LocalPlayer.state.inv_busy then
-								QBCore.Functions.TriggerCallback('qb-vineyard:server:loadIngredients', function(result)
-									if result then loadIngredients = true end
-								end)
-								
-							end
-						else
-							if not finishedWine then
-								exports['qb-core']:DrawText(Lang:t("task.wine_process"),'right')
-								if IsControlJustPressed(0, 38) and not LocalPlayer.state.inv_busy then
-									StartWineProcess()
-								end
-							else
-								exports['qb-core']:DrawText(Lang:t("task.get_wine"),'right')
-								if IsControlJustPressed(0, 38) and not LocalPlayer.state.inv_busy then
-									TriggerServerEvent("qb-vineyard:server:receiveWine")
-									finishedWine = false
-									loadIngredients = false
-									wineStarted = false
-								end
-							end
-						end
-					else
-						exports['qb-core']:DrawText(Lang:t("task.countdown",{time=winetimer}),'right')
-						Wait(999)
-					end
-					Wait(1)
-				end
-			end)
-
-		end
-	else
-		if Config.Debug then log(Lang:t("text.zone_exited",{zone="Wine"})) end
-		exports['qb-core']:HideText()
+local function workWine()
+	if wineStarted then
+		exports['qb-core']:DrawText(Lang:t("task.countdown", { time = winetimer }), 'right')
+		Wait(1000)
+		return
 	end
-end)
 
-Zones[3] = {
-	isInside = false,
-	zone = PolyZone:Create(Config.Vineyard.grapejuice.zones, {
-		name="Vineyard-GrapeJuice",
-		minZ = Config.Vineyard.grapejuice.minZ,
-		maxZ = Config.Vineyard.grapejuice.maxZ,
-		debugPoly = Config.Debug
-	})
-}
-Zones[3].zone:onPlayerInOut(function(isPointInside)
-	Zones[3].isInside = isPointInside
-	if isPointInside then
-		if Config.Debug then log(Lang:t("text.zone_entered",{zone="Juice"})) end
-		if not startVineyard and PlayerJob.name == "vineyard" then
-			CreateThread(function()
-				while Zones[3].isInside do
-					exports['qb-core']:DrawText(Lang:t("task.make_grape_juice"),'right')
-					if IsControlJustPressed(0, 38) and not LocalPlayer.state.inv_busy then
-						QBCore.Functions.TriggerCallback('qb-vineyard:server:grapeJuice', function(result)
-							if result then PrepareAnim() grapeJuiceProcess() end
-						end)
-					end
-					Wait(1)
-				end
-			end)
+	if loadIngredients then
+		if finishedWine then
+			exports['qb-core']:DrawText(Lang:t("task.get_wine"), 'right')
+			if IsControlJustPressed(0, 38) and not LocalPlayer.state.inv_busy then
+				TriggerServerEvent("qb-vineyard:server:receiveWine")
+				finishedWine = false
+				loadIngredients = false
+				wineStarted = false
+				wineZones:remove()
+			end
+			return
 		end
-	else
-		if Config.Debug then log(Lang:t("text.zone_exited",{zone="Juice"})) end
-		exports['qb-core']:HideText()
+		exports['qb-core']:DrawText(Lang:t("task.wine_process"), 'right')
+		if IsControlJustPressed(0, 38) and not LocalPlayer.state.inv_busy then
+			StartWineProcess()
+		end
+		return
 	end
-end)
+	exports['qb-core']:DrawText(Lang:t("task.load_ingrediants"), 'right')
+	if IsControlJustPressed(0, 38) and not LocalPlayer.state.inv_busy then
+		QBCore.Functions.TriggerCallback('qb-vineyard:server:loadIngredients', function(result)
+			if result then loadIngredients = true end
+		end)
+	end
+end
+
+wineZones = lib.zones.poly({
+	points = Config.Vineyard.wine.zones,
+	thickness = 2,
+	debug = Config.Debug,
+	onExit = exitZone(),
+	onEnter = enterZone(),
+	inside = function()
+		CreateThread(function()
+			while true do
+				workWine()
+				Wait(1)
+			end
+		end)
+	end
+})
+
+local function juiceWork()
+	if IsControlJustPressed(0, 38) and not LocalPlayer.state.inv_busy then
+		QBCore.Functions.TriggerCallback('qb-vineyard:server:grapeJuice', function(result)
+			if result then PrepareAnim() grapeJuiceProcess() end
+		end)
+		juiceZones:remove()
+		return false
+	end
+	return true
+end
+
+juiceZones = lib.zones.poly({
+	points = Config.Vineyard.grapejuice.zones,
+	thickness = 2,
+	debug = Config.Debug,
+	onExit = exitZone(),
+	onEnter = enterZone(),
+	inside = function()
+		exports['qb-core']:DrawText(Lang:t("task.make_grape_juice"),'right')
+		CreateThread(function()
+			while juiceWork() do
+				Wait(1)
+			end
+		end)
+	end
+})
