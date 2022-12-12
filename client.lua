@@ -90,7 +90,7 @@ local function pickProcess()
 	else
 		lib.notify({description= {Lang:t("task.cancel_task")}, type = "error"})
 	end
-	ClearPedTasks(PlayerPedId())
+	ClearPedTasks(cache.ped)
 end
 
 local function LoadAnim(dict)
@@ -101,7 +101,7 @@ local function LoadAnim(dict)
 end
 
 local function PickAnim()
-    local ped = PlayerPedId()
+    local ped = cache.ped
     LoadAnim('amb@prop_human_bum_bin@idle_a')
     TaskPlayAnim(ped, 'amb@prop_human_bum_bin@idle_a', 'idle_a', 6.0, -6.0, -1, 47, 0, 0, 0, 0)
 end
@@ -116,9 +116,9 @@ local function enterZone(self)
 	lib.notify({description= {Lang:t("text.zone_entered", self.id)}, type = "inform"})
 end
 
-local function insideGrapeZone()
+local function toPickGrapes()
 	lib.showTextUI(Lang:t("task.start_task"), {position = 'right'})
-	if not IsPedInAnyVehicle(PlayerPedId()) and IsControlJustReleased(0,38) then
+	if not IsPedInAnyVehicle(cache.ped) and IsControlJustReleased(0,38) then
 		PickAnim()
 		pickProcess()
 		lib.hideTextUI()
@@ -133,7 +133,7 @@ grapeZones = lib.zones.poly({
 	debug = Config.Debug,
 	onExit = exitZone,
 	onEnter = enterZone,
-	inside = insideGrapeZone,
+	inside = toPickGrapes,
 })
 
 local function StartWineProcess()
@@ -151,7 +151,7 @@ end
 
 
 local function PrepareAnim()
-    local ped = PlayerPedId()
+    local ped = cache.ped
     LoadAnim('amb@code_human_wander_rain@male_a@base')
     TaskPlayAnim(ped, 'amb@code_human_wander_rain@male_a@base', 'static', 6.0, -6.0, -1, 47, 0, 0, 0, 0)
 end
@@ -167,10 +167,10 @@ local function grapeJuiceProcess()
 	else
 		lib.notify({description= {Lang:t("task.cancel_task")}, type = "error"})
 	end
-	ClearPedTasks(PlayerPedId())
+	ClearPedTasks(cache.ped)
 end
 
-local function insideStartZone(self)
+local function startZone(self)
 	lib.showTextUI(Lang:t("task.start_task"), {position = 'right'})
 	if not IsControlJustReleased(0,38) or startVineyard then return end
 	startVineyard = true
@@ -185,40 +185,39 @@ startZones = lib.zones.poly({
 	debug = Config.Debug,
 	onExit = exitZone,
 	onEnter = enterZone,
-	inside = insideStartZone
+	inside = startZone
 })
 
 local function workWine(self)
 	if wineStarted then
 		lib.showTextUI(Lang:t("task.countdown"), {time = winetimer}, {position = 'right'})
-		Wait(1000)
 		return
 	end
 
 	if loadIngredients then
-		if finishedWine then
-			lib.showTextUI(Lang:t("task.get_wine"), {position = 'right'})
-			if IsControlJustReleased(0, 38) and not LocalPlayer.state.invBusy then
-				TriggerServerEvent("qb-vineyard:server:receiveWine")
-				finishedWine = false
-				loadIngredients = false
-				wineStarted = false
-				self:remove()
-			end
-			return
-		end
 		lib.showTextUI(Lang:t("task.process_wine"), {position = 'right'})
 		if IsControlJustReleased(0, 38) and not LocalPlayer.state.invBusy then
 			StartWineProcess()
 		end
 		return
 	end
-	lib.showTextUI(Lang:t("task.load_ingrediants"), {position = 'right'})
-	if IsControlJustReleased(0, 38) and not LocalPlayer.state.invBusy then
-		QBCore.Functions.TriggerCallback('qb-vineyard:server:loadIngredients', function(result)
-			if result then loadIngredients = true end
-		end)
+
+	if finishedWine then
+		lib.showTextUI(Lang:t("task.get_wine"), {position = 'right'})
+		if not IsControlJustReleased(0, 38) or LocalPlayer.state.invBusy then return end
+		TriggerServerEvent("qb-vineyard:server:receiveWine")
+		finishedWine = false
+		loadIngredients = false
+		wineStarted = false
+		self:remove()
+		return
 	end
+
+	lib.showTextUI(Lang:t("task.load_ingrediants"), {position = 'right'})
+	if not IsControlJustReleased(0, 38) or LocalPlayer.state.invBusy then return end
+	QBCore.Functions.TriggerCallback('qb-vineyard:server:loadIngredients', function(result)
+		if result then loadIngredients = true end
+	end)
 	lib.hideTextUI()
 end
 
