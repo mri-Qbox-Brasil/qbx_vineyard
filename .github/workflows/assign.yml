@@ -1,23 +1,18 @@
-name: Lint
-on: [push, pull_request_target]
+name: Assign
+on:
+  issue_comment:
+    types: created
+
+permissions:
+  contents: read
+
 jobs:
-  lint:
-    name: Lint Resource
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Lint
-        uses: iLLeniumStudios/fivem-lua-lint-action@v2
-        with:
-          capture: "junit.xml"
-          args: "-t --formatter JUnit"
-          extra_libs: mysql+ox_lib
-      - name: Generate Lint Report
-        if: always()
-        uses: mikepenz/action-junit-report@v3
-        with:
-          report_paths: "**/junit.xml"
-          check_name: Linting Report
-          fail_on_failure: false
+  issue_assign:
+    issues: write
+    pull-requests: write
+  runs-on: ubuntu-latest
+  steps:
+  - if: github.event.comment.body == 'take'
+    run: |
+      echo "Assigning issue ${{ github.event.issue.number }} to ${{ github.event.comment.user.login }}"
+      curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -d '{"assignees": ["${{ github.event.comment.user.login }}"]}' https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/assignees 
