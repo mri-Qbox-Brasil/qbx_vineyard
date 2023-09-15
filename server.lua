@@ -6,17 +6,17 @@ local picked = {}
 ---@return boolean callback The value sent back to the client
 local function loadIngredients(item, requirement)
     local src = source
-	local Player = QBCore.Functions.GetPlayer(src)
+	local player = QBCore.Functions.GetPlayer(src)
     local itemCount = exports.ox_inventory:GetItem(src, item, nil, true)
-	if not Player.PlayerData.items then
-        TriggerClientEvent('ox_lib:notify', source, {type = 'error', description = Lang:t("error.no_items")})
+	if not player.PlayerData.items then
+        TriggerClientEvent('QBCore:Notify', src, Lang:t('error.no_items'), 'error')
         return false
     end
     if itemCount < requirement then
-        TriggerClientEvent('ox_lib:notify', source, {type = 'error', description = Lang:t("error.invalid_items")})
+        TriggerClientEvent('QBCore:Notify', src, Lang:t('error.invalid_items'), 'error')
         return false
     end
-    Player.Functions.RemoveItem(item, requirement, false)
+    player.Functions.RemoveItem(item, requirement, false)
     return true
 end
 
@@ -34,7 +34,7 @@ end
 local function addItem(item, amount)
     if onCooldown(20) then return end
     local player = QBCore.Functions.GetPlayer(source)
-    Player.Functions.AddItem(item, amount)
+    player.Functions.AddItem(item, amount)
 end
 
 lib.callback.register('qb-vineyard:server:loadIngredients', function()
