@@ -20,7 +20,7 @@ end
 local function pickProcess()
     if lib.progressCircle({
         duration = math.random(6000, 8000),
-        label = Lang:t('progress.pick_grapes'),
+        label = locale('progress.pick_grapes'),
         useWhileDead = false,
         canCancel = true,
         disable = {
@@ -33,14 +33,13 @@ local function pickProcess()
         tasking = false
         TriggerServerEvent("qbx_vineyard:server:getGrapes")
     else
-        exports.qbx_core:Notify(Lang:t('task.cancel_task'), 'error')
+        exports.qbx_core:Notify(locale('task.cancel_task'), 'error')
     end
     ClearPedTasks(cache.ped)
 end
 
 local function pickAnim()
-    lib.requestAnimDict('amb@prop_human_bum_bin@idle_a')
-    TaskPlayAnim(cache.ped, 'amb@prop_human_bum_bin@idle_a', 'idle_a', 6.0, -6.0, -1, 47, 0, 0, 0, 0)
+    lib.playAnim(cache.ped, 'amb@prop_human_bum_bin@idle_a', 'idle_a', 6.0, -6.0, -1, 47, 0, 0, 0, 0)
 end
 
 local function toPickGrapes()
@@ -57,7 +56,7 @@ local function wineProcessing()
             loadIngredients = true
             if lib.progressBar({
                 duration = 5000,
-                label = Lang:t('progress.process_wine'),
+                label = locale('progress.process_wine'),
                 useWhileDead = false,
                 canCancel = true,
                 disable = {
@@ -73,10 +72,11 @@ local function wineProcessing()
             }) then
                 TriggerServerEvent('qbx_vineyard:server:receiveWine')
             else
-                exports.qbx_core:Notify(Lang:t('task.cancel_task'), 'error')
+                TriggerServerEvent('qbx_vineyard:server:cancelProcessing')
+                exports.qbx_core:Notify(locale('task.cancel_task'), 'error')
             end
         else
-            exports.qbx_core:Notify(Lang:t('error.invalid_items'), 'error')
+            exports.qbx_core:Notify(locale('error.invalid_items'), 'error')
         end
     end)
 end
@@ -87,7 +87,7 @@ local function juiceProcessing()
             loadIngredients = true
             if lib.progressBar({
                 duration = 5000,
-                label = Lang:t('progress.process_juice'),
+                label = locale('progress.process_juice'),
                 useWhileDead = false,
                 canCancel = true,
                 disable = {
@@ -103,10 +103,11 @@ local function juiceProcessing()
             }) then
                 TriggerServerEvent('qbx_vineyard:server:receiveGrapeJuice')
             else
-                exports.qbx_core:Notify(Lang:t('task.cancel_task'), 'error')
+                TriggerServerEvent('qbx_vineyard:server:cancelProcessing')
+                exports.qbx_core:Notify(locale('task.cancel_task'), 'error')
             end
         else
-            exports.qbx_core:Notify(Lang:t('error.invalid_items'), 'error')
+            exports.qbx_core:Notify(locale('error.invalid_items'), 'error')
         end
     end)
 end
@@ -115,19 +116,19 @@ end
 local function processingMenu()
     lib.registerContext({
         id = 'processingMenu',
-        title = Lang:t('menu.title'),
+        title = locale('menu.title'),
         options = {
             {
-                title = Lang:t('menu.process_wine_title'),
-                description = Lang:t('menu.wine_items_needed', { amount = sharedConfig.grapeJuicesNeeded }),
+                title = locale('menu.process_wine_title'),
+                description = locale('menu.wine_items_needed', sharedConfig.grapeJuicesNeeded ),
                 icon = 'wine-bottle',
                 onSelect = function()
                     wineProcessing()
                 end,
             },
             {
-                title = Lang:t('menu.process_juice_title'),
-                description = Lang:t('menu.juice_items_needed', { amount = sharedConfig.grapesNeeded }),
+                title = locale('menu.process_juice_title'),
+                description = locale('menu.juice_items_needed', sharedConfig.grapesNeeded ),
                 icon = 'bottle-droplet',
                 onSelect = function()
                     juiceProcessing()
@@ -148,7 +149,7 @@ lib.zones.box({
         lib.hideTextUI()
     end,
     onEnter = function ()
-        lib.showTextUI(Lang:t('task.vineyard_processing'))
+        lib.showTextUI(locale('task.vineyard_processing'))
     end,
     inside = function()
         if IsControlJustReleased(0, 38) then
@@ -167,7 +168,7 @@ for _, coords in pairs(config.grapeLocations) do
             lib.hideTextUI()
         end,
         onEnter = function()
-            lib.showTextUI(Lang:t("task.start_task"))
+            lib.showTextUI(locale("task.start_task"))
         end,
         inside = toPickGrapes,
     })
